@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"server/kafka"
 	"server/scylla"
+	"slices"
 	"strconv"
 	"time"
 
@@ -12,20 +13,7 @@ import (
 	"github.com/gocql/gocql"
 )
 
-type Log struct {
-	Level      string                 `json:"level"`
-	Message    string                 `json:"message"`
-	ResourceID string                 `json:"resourceID"`
-	Timestamp  string                 `json:"timestamp"`
-	TraceID    string                 `json:"traceID"`
-	SpanID     string                 `json:"spanID"`
-	Commit     string                 `json:"commit"`
-	Metadata   map[string]interface{} `json:"metadata"`
-}
-
-const kafkaBroker = "localhost:9092"
-
-var topics = []string{"auth", "database", "email", "payment", "server", "services"}
+var topics = []string{"logs"}
 
 var startTime time.Time
 
@@ -44,8 +32,8 @@ func main() {
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
 	router.Use(cors.New(config))
 
-	logChannel := make(chan kafka.Log, 100)
-	kafka.KafkaProducer(topics, (chan kafka.Log)(logChannel))
+	logChannel := make(chan kafka.Message, 100)
+	go kafka.KafkaProducer(topics, logChannel)
 
 	cluster := scylla.CreateCluster(gocql.Quorum, "argus_logs", "localhost")
 	session, err := gocql.NewSession(*cluster)
@@ -56,8 +44,15 @@ func main() {
 	}
 	defer session.Close()
 
-	router.POST("/log", func(c *gin.Context) {
-		var log Log
+	router.POST("/log/:topic", func(c *gin.Context) {
+		topic := c.Param("topic")
+
+		if !slices.Contains(topics, topic) {
+			c.JSON(400, gin.H{"message": "Invalid topic"})
+			return
+		}
+
+		var log kafka.Log
 		if err := c.BindJSON(&log); err != nil {
 			c.JSON(400, gin.H{"message": "Invalid log"})
 			return
@@ -68,7 +63,10 @@ func main() {
 			return
 		}
 
-		logChannel <- kafka.Log(log)
+		logChannel <- kafka.Message{
+			Topic:   topic,
+			Message: log,
+		}
 
 		c.JSON(202, gin.H{"message": "Log received"})
 	})
