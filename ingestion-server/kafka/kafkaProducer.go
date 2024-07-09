@@ -9,13 +9,14 @@ import (
 )
 
 type Log struct {
-	Level      string `json:"level"`
-	Message    string `json:"message"`
-	ResourceID string `json:"resourceID"`
-	Timestamp  string `json:"timestamp"`
-	TraceID    string `json:"traceID"`
-	SpanID     string `json:"spanID"`
-	Commit     string `json:"commit"`
+	Level      string            `json:"level"`
+	Message    string            `json:"message"`
+	ResourceID string            `json:"resourceID"`
+	Timestamp  string            `json:"timestamp"`
+	TraceID    string            `json:"traceID"`
+	SpanID     string            `json:"spanID"`
+	Commit     string            `json:"commit"`
+	Metadata   map[string]string `json:"metadata"`
 }
 
 type Message struct {

@@ -63,6 +63,8 @@ func main() {
 			return
 		}
 
+		fmt.Printf("Received log: %+v\n", log)
+
 		logChannel <- kafka.Message{
 			Topic:   topic,
 			Message: log,
