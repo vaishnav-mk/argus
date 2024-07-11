@@ -33,7 +33,7 @@ func main() {
 	router.Use(cors.New(config))
 
 	logChannel := make(chan kafka.Message, 100)
-	go kafka.KafkaProducer(topics, logChannel)
+	go kafka.KafkaProducer(topics, logChannel, 100, 100, 1*time.Second)
 
 	cluster := scylla.CreateCluster(gocql.Quorum, "argus_logs", "localhost")
 	session, err := gocql.NewSession(*cluster)

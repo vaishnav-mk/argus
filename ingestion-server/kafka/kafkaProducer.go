@@ -4,19 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
 
 type Log struct {
-	Level      string            `json:"level"`
-	Message    string            `json:"message"`
-	ResourceID string            `json:"resourceID"`
-	Timestamp  string            `json:"timestamp"`
-	TraceID    string            `json:"traceID"`
-	SpanID     string            `json:"spanID"`
-	Commit     string            `json:"commit"`
-	Metadata   map[string]string `json:"metadata"`
+	Level      string                 `json:"level"`
+	Message    string                 `json:"message"`
+	ResourceID string                 `json:"resourceID"`
+	Timestamp  string                 `json:"timestamp"`
+	TraceID    string                 `json:"spanID"`
+	SpanID     string                 `json:"traceID"`
+	Commit     string                 `json:"commit"`
+	Metadata   map[string]interface{} `json:"metadata"`
 }
 
 type Message struct {
@@ -24,44 +26,77 @@ type Message struct {
 	Message Log    `json:"message"`
 }
 
-func KafkaProducer(topics []string, logChannel chan Message) {
+func KafkaProducer(topics []string, logChannel chan Message, numWorkers int, batchSize int, batchTimeout time.Duration) {
+	var wg sync.WaitGroup
+
 	for _, topic := range topics {
-		go func(topic string) {
-			writer := kafka.NewWriter(kafka.WriterConfig{
-				Brokers:  []string{"localhost:9092"},
-				Topic:    topic,
-				Balancer: &kafka.LeastBytes{},
+		writer := kafka.NewWriter(kafka.WriterConfig{
+			Brokers:  []string{"localhost:9092"},
+			Topic:    topic,
+			Balancer: &kafka.LeastBytes{},
+		})
+
+		defer writer.Close()
+
+		for i := 0; i < numWorkers; i++ {
+			wg.Add(1)
+			go worker(writer, logChannel, &wg, batchSize, batchTimeout)
+		}
+	}
+
+	wg.Wait()
+}
+
+func worker(writer *kafka.Writer, logChannel chan Message, wg *sync.WaitGroup, batchSize int, batchTimeout time.Duration) {
+	defer wg.Done()
+	batch := make([]kafka.Message, 0, batchSize)
+	timer := time.NewTimer(batchTimeout)
+
+	for {
+		select {
+		case log := <-logChannel:
+			topic := log.Topic
+			message, err := json.Marshal(log.Message)
+			if err != nil {
+				fmt.Printf("Error marshaling log for Kafka topic %s: %v\n", topic, err)
+				continue
+			}
+
+			batch = append(batch, kafka.Message{
+				Key:   []byte(log.Message.Timestamp),
+				Value: message,
 			})
 
-			defer writer.Close()
+			fmt.Printf("Total logs in batch for Kafka topic %s: %d\n", topic, len(batch))
+			fmt.Printf("Total logs in channel: %d\n", len(logChannel))
+			fmt.Printf("Total logs in writer: %d\n", writer.Stats().Writes)
+			fmt.Printf("Log: %v\n", log.Message)
 
-			for log := range logChannel {
-				topic := log.Topic
-				log := log.Message
-
-				if err := WriteLogToKafka(writer, topic, log); err != nil {
-					fmt.Printf("Error writing log to Kafka topic %s: %v\n", topic, err)
+			if len(batch) == batchSize || timer.C != nil {
+				err := writeToKafka(writer, batch)
+				if err != nil {
+					fmt.Printf("Error writing batch to Kafka topic %s: %v\n", topic, err)
 				}
+				batch = make([]kafka.Message, 0, batchSize)
+				timer.Reset(batchTimeout)
 			}
-		}(topic)
+
+		case <-timer.C:
+			if len(batch) > 0 {
+				err := writeToKafka(writer, batch)
+				if err != nil {
+					fmt.Printf("Error writing batch to Kafka topic %s: %v\n", batch[0].Topic, err)
+				}
+				batch = make([]kafka.Message, 0, batchSize)
+			}
+		}
 	}
 }
 
-func WriteLogToKafka(writer *kafka.Writer, topic string, log Log) error {
-	message, err := json.Marshal(log)
+func writeToKafka(writer *kafka.Writer, batch []kafka.Message) error {
+	err := writer.WriteMessages(context.Background(), batch...)
 	if err != nil {
-		return fmt.Errorf("error marshaling log for Kafka topic %s: %w", topic, err)
-	}
-	fmt.Printf("Writing message to Kafka topic %s: %s\n", topic, message)
-
-	err = writer.WriteMessages(context.Background(),
-		kafka.Message{
-			Key:   []byte(log.ResourceID),
-			Value: message,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("error writing message to Kafka topic %s: %w", topic, err)
+		return fmt.Errorf("error writing message to Kafka topic: %w", err)
 	}
 	return nil
 }

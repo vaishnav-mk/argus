@@ -9,14 +9,14 @@ import (
 )
 
 type Log struct {
-	Level      string `json:"level"`
-	Message    string `json:"message"`
-	ResourceID string `json:"resourceID"`
-	Timestamp  string `json:"timestamp"`
-	TraceID    string `json:"traceID"`
-	SpanID     string `json:"spanID"`
-	Commit     string `json:"commit"`
-	Metadata   map[string]string `json:"metadata"`
+	Level      string                 `json:"level"`
+	Message    string                 `json:"message"`
+	ResourceID string                 `json:"resourceID"`
+	Timestamp  string                 `json:"timestamp"`
+	TraceID    string                 `json:"traceID"`
+	SpanID     string                 `json:"spanID"`
+	Commit     string                 `json:"commit"`
+	Metadata   map[string]interface{} `json:"metadata"`
 }
 
 func KafkaConsumer(kafkaBrokerHost string, logChannel chan Log, topics []string) {
@@ -32,6 +32,8 @@ func KafkaConsumer(kafkaBrokerHost string, logChannel chan Log, topics []string)
 
 			defer reader.Close()
 
+			var count int
+
 			for {
 				message, err := reader.FetchMessage(context.Background())
 				if err != nil {
@@ -45,6 +47,9 @@ func KafkaConsumer(kafkaBrokerHost string, logChannel chan Log, topics []string)
 					fmt.Printf("Error decoding log from Kafka message for topic %s: %v\n", topic, err)
 					continue
 				}
+
+				count++
+				fmt.Println("Total logs received:", count)
 
 				logChannel <- log
 
