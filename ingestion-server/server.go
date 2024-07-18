@@ -11,6 +11,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gocql/gocql"
+	"github.com/google/uuid"
 )
 
 var topics = []string{"logs"}
@@ -43,6 +44,8 @@ func main() {
 		return
 	}
 	defer session.Close()
+
+	router.Use(guidMiddleware())
 
 	router.POST("/log/:topic", func(c *gin.Context) {
 		topic := c.Param("topic")
@@ -95,5 +98,16 @@ func main() {
 	fmt.Println("Server is running")
 	if err := router.Run(":5000"); err != nil {
 		fmt.Println("Error starting server:", err)
+	}
+}
+
+func guidMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uuid := uuid.New()
+		c.Set("uuid", uuid)
+		fmt.Printf("The request with uuid %s is started \n", uuid)
+		startTime := time.Now()
+		c.Next()
+		fmt.Printf("The request with uuid %s is completed in %v \n", uuid, time.Since(startTime))
 	}
 }
