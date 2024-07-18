@@ -11,9 +11,15 @@ import (
 )
 
 func init() {
+	buffers := map[string]int{
+		"LogChannel": 1000,
+	}
+
 	initializers.LoadEnv()
 	initializers.ConnectToCache()
 	initializers.ConnectToScylla()
+	initializers.InitializeBuffers(buffers)
+	initializers.InitializeKafka()
 
 	config.AddLogger()
 }

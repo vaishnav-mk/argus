@@ -8,8 +8,10 @@ import (
 )
 
 func LogRouter(config *gin.Engine) {
-	debug := config.Group("/logs", middlewares.VerifyToken)
+	debug := config.Group("/logs")
 	{
-		debug.GET("/count", middlewares.AddUUID, controllers.Count)
+		debug.GET("/count", middlewares.AddUUID, controllers.CountLogs)
+		debug.GET("/", middlewares.AddUUID, controllers.GetLogs)
+		debug.POST("/", middlewares.AddUUID, controllers.PostLog)
 	}
 }
