@@ -17,7 +17,6 @@ func GetHash(c *gin.Context) string {
 	}
 
 	combinedString := strings.Join(values, ",")
-	fmt.Println("combinedString: ", combinedString)
 
 	hash := sha256.New()
 	hash.Write([]byte(combinedString))

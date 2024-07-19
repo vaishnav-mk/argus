@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -25,6 +26,7 @@ type Config struct {
 	REDIS_PASSWORD  string      `mapstructure:"REDIS_PASSWORD"`
 	JWT_SECRET      string      `mapstructure:"JWT_SECRET"`
 	FRONTEND_URL    string      `mapstructure:"FRONTEND_URL"`
+	AUTH_TOKEN      string      `mapstructure:"AUTH_TOKEN"`
 	// POPULATE_USERS bool        `mapstructure:"POPULATE_USERS"`
 	// POPULATE_LOGS  bool        `mapstructure:"POPULATE_LOGS"`
 }
@@ -48,7 +50,7 @@ func LoadEnv() {
 	missingKeys := checkMissingKeys(requiredKeys, CONFIG)
 
 	if len(missingKeys) > 0 {
-		err := fmt.Errorf("following environment variables not found: %v", missingKeys)
+		err := fmt.Errorf("missing env variables: %s", strings.Join(missingKeys, ", "))
 		log.Fatal(err)
 	}
 

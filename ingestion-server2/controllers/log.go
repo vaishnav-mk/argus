@@ -110,3 +110,48 @@ func PostLog(c *gin.Context) {
 
 	c.JSON(202, gin.H{"message": "Log received"})
 }
+
+func GetLog(c *gin.Context) {
+	logID := c.Param("log_id")
+	q := initializers.DB.Query("SELECT * FROM argus_logs.logs WHERE timestamp = ?", logID)
+	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
+	if err := q.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &spanID, &traceID); err != nil {
+		c.JSON(404, gin.H{"message": "Log not found"})
+		return
+	}
+	metadataBytes := []byte(metadata)
+	var metadataMap map[string]interface{}
+	err := json.Unmarshal(metadataBytes, &metadataMap)
+	if err != nil {
+		fmt.Println("Error unmarshalling metadata:", err)
+		c.JSON(500, gin.H{"message": "Error getting log"})
+		return
+	}
+	log := types.Log{
+		Level:      level,
+		Message:    message,
+		ResourceID: resourceID,
+		Timestamp:  timestamp,
+		TraceID:    traceID,
+		SpanID:     spanID,
+		Commit:     commit,
+		Metadata:   metadataMap,
+	}
+	c.JSON(200, gin.H{"log": log})
+}
+
+func DeleteLog(c *gin.Context) {
+	logID := c.Param("log_id")
+	if logID == "" {
+		c.JSON(400, gin.H{"message": "Invalid log ID"})
+		return
+	}
+
+	q := initializers.DB.Query("DELETE FROM argus_logs.logs WHERE timestamp = ?", logID)
+	if err := q.Exec(); err != nil {
+		fmt.Println("Error deleting log:", err)
+		c.JSON(500, gin.H{"message": "Error deleting log"})
+		return
+	}
+	c.JSON(200, gin.H{"message": "Log deleted"})
+}

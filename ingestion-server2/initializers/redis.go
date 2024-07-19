@@ -12,7 +12,7 @@ var RedisClient *redis.Client
 
 var ctx = context.TODO()
 
-var CacheExpirationTime = time.Minute * 2
+var CacheExpirationTime = time.Second * 30 // cache for 30 seconds
 
 func ConnectToCache() {
 	RedisClient = redis.NewClient(&redis.Options{

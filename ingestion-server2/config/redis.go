@@ -18,15 +18,15 @@ var ctx = context.TODO()
 func GetCache(key string) LogCache {
 	data, err := initializers.RedisClient.Get(ctx, key).Result()
 	if err != nil {
-		return LogCache{}
 		fmt.Println(err)
+		return LogCache{}
 	}
 
 	var logs LogCache
 	err = json.Unmarshal([]byte(data), &logs)
 	if err != nil {
-		return LogCache{}
 		fmt.Println(err)
+		return LogCache{}
 	}
 
 	return logs

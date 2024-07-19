@@ -1,12 +1,17 @@
 package middlewares
 
-import "github.com/gin-gonic/gin"
+import (
+	"server/config"
+	"server/initializers"
+
+	"github.com/gin-gonic/gin"
+)
 
 func VerifyToken(c *gin.Context) {
 	token := c.Query("token")
-	if token != "123" {
+	if token != initializers.CONFIG.AUTH_TOKEN {
 		c.JSON(401, gin.H{
-			"message": "Unauthorized",
+			"message": config.UNAUTHORIZED,
 		})
 		c.Abort()
 	}

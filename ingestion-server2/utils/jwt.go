@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	ACCESS_KEY_TTL  = 15 * time.Minute
-	REFRESH_KEY_TTL = 7 * 24 * time.Hour
+	ACCESS_KEY_TTL  = 15 * time.Minute // 15 minutes
+	REFRESH_KEY_TTL = 7 * 24 * time.Hour // 7 days
 )
 
 var Jwtkey = []byte(initializers.CONFIG.JWT_SECRET)

@@ -1,10 +1,11 @@
 package initializers
 
 import (
-	"fmt"
 	"server/kafka"
 	"server/types"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type BuffersType struct {
@@ -20,12 +21,11 @@ func InitializeBuffers(names map[string]int) {
 		case "LogChannel":
 			Buffers.LogChannel = make(chan types.Message, size)
 		}
-		fmt.Println("Buffer initialized: ", name)
+		log.Printf("Buffer %s initialized with size %d", name, size)
 	}
-
-	fmt.Println("Buffers initialized")
 }
 
 func InitializeKafka() {
 	go kafka.KafkaProducer(topics, Buffers.LogChannel, 100, 100, 1*time.Second)
+	log.Print("Kafka producer initialized")
 }

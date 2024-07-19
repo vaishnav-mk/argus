@@ -1,7 +1,6 @@
 package initializers
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -29,7 +28,7 @@ func ConnectToScylla() *gocql.Session {
 	if err != nil {
 		log.Fatal("Failed to Connect to the database: ", err)
 	} else {
-		fmt.Println("Connected to Scylla!")
+		log.Println("Connected to Scylla!")
 	}
 	return DB
 }
