@@ -3,23 +3,30 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"server/initializers"
 	"server/types"
 )
 
+type LogCache struct {
+	NextPageState string
+	Logs          []types.Log
+}
+
 var ctx = context.TODO()
 
-func GetCache(key string) []types.Log {
+func GetCache(key string) LogCache {
 	data, err := initializers.RedisClient.Get(ctx, key).Result()
 	if err != nil {
-		Logger.Warnw("Failed to get cache", "Error", err)
-		return nil
+		return LogCache{}
+		fmt.Println(err)
 	}
 
-	var logs []types.Log
-	if err := json.Unmarshal([]byte(data), &logs); err != nil {
-		Logger.Warnw("Failed to unmarshal logs", "Error", err)
-		return nil
+	var logs LogCache
+	err = json.Unmarshal([]byte(data), &logs)
+	if err != nil {
+		return LogCache{}
+		fmt.Println(err)
 	}
 
 	return logs
@@ -35,7 +42,7 @@ func GetCacheKeys() []string {
 	return keys
 }
 
-func SetCache(key string, logs []types.Log) {
+func SetCache(key string, logs LogCache) {
 	data, err := json.Marshal(logs)
 	if err != nil {
 		Logger.Warnw("Failed to marshal logs", "Error", err)

@@ -41,12 +41,13 @@ func GetLogs(c *gin.Context) {
 	}
 
 	searchHash := utils.GetHash(c)
-	// cachedLogs := config.GetCache(searchHash)
+	fmt.Println(searchHash + "_page_" + pageStateParam)
+	cachedLogs := config.GetCache(searchHash + "_page_" + pageStateParam)
 
-	// if cachedLogs != nil {
-	// 	c.JSON(200, gin.H{"logs": cachedLogs, "count": len(cachedLogs), "cached": true})
-	// 	return
-	// }
+	if cachedLogs.Logs != nil {
+		c.JSON(200, gin.H{"logs": cachedLogs.Logs, "count": len(cachedLogs.Logs), "cached": true, "nextPageState": cachedLogs.NextPageState})
+		return
+	}
 
 	q := initializers.DB.Query("SELECT * FROM argus_logs.logs").PageSize(limit).PageState(pageState)
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
@@ -79,10 +80,10 @@ func GetLogs(c *gin.Context) {
 		c.JSON(404, gin.H{"message": "No logs found"})
 		return
 	}
-
-	go config.SetCache(searchHash, logs)
-
 	nextPageStateStr := base64.StdEncoding.EncodeToString(nextPageState)
+
+	go config.SetCache(searchHash+"_page_"+pageStateParam, config.LogCache{NextPageState: nextPageStateStr, Logs: logs})
+
 	c.JSON(200, gin.H{"logs": logs, "count": len(logs), "cached": false, "nextPageState": nextPageStateStr})
 }
 
