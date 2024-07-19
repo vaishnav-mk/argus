@@ -1,12 +1,14 @@
 package controllers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"server/config"
 	"server/initializers"
 	"server/types"
 	"server/utils"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,23 +25,34 @@ func CountLogs(c *gin.Context) {
 }
 
 func GetLogs(c *gin.Context) {
-	limit := c.DefaultQuery("limit", "10")
-
-	searchHash := utils.GetHash(c)
-	cachedLogs := config.GetCache(searchHash)
-	// fmt.Println("cachedLogs: ", cachedLogs)
-
-	if cachedLogs != nil {
-		c.JSON(200, gin.H{"logs": cachedLogs, "count": len(cachedLogs), "cached": true})
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Invalid limit"})
 		return
 	}
+	pageStateParam := c.DefaultQuery("page_state", "")
+	var pageState []byte
+	if pageStateParam != "" {
+		pageState, err = base64.StdEncoding.DecodeString(pageStateParam)
+		if err != nil {
+			c.JSON(400, gin.H{"message": "Invalid pageState"})
+			return
+		}
+	}
 
-	q := initializers.DB.Query("SELECT * FROM argus_logs.logs LIMIT ?", limit)
+	searchHash := utils.GetHash(c)
+	// cachedLogs := config.GetCache(searchHash)
+
+	// if cachedLogs != nil {
+	// 	c.JSON(200, gin.H{"logs": cachedLogs, "count": len(cachedLogs), "cached": true})
+	// 	return
+	// }
+
+	q := initializers.DB.Query("SELECT * FROM argus_logs.logs").PageSize(limit).PageState(pageState)
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
 	var logs []types.Log
 	it := q.Iter()
 	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &spanID, &traceID) {
-		fmt.Println("metadata: ", metadata)
 		metadataBytes := []byte(metadata)
 		var metadataMap map[string]interface{}
 		err := json.Unmarshal(metadataBytes, &metadataMap)
@@ -47,7 +60,6 @@ func GetLogs(c *gin.Context) {
 			fmt.Println("Error unmarshalling metadata:", err)
 			continue
 		}
-		fmt.Println("map: ", metadataMap)
 		logs = append(logs, types.Log{
 			Level:      level,
 			Message:    message,
@@ -59,6 +71,7 @@ func GetLogs(c *gin.Context) {
 			Metadata:   metadataMap,
 		})
 	}
+	nextPageState := it.PageState()
 	if err := it.Close(); err != nil {
 		fmt.Println("Error closing iterator:", err)
 	}
@@ -69,7 +82,8 @@ func GetLogs(c *gin.Context) {
 
 	go config.SetCache(searchHash, logs)
 
-	c.JSON(200, gin.H{"logs": logs, "count": len(logs), "cached": false})
+	nextPageStateStr := base64.StdEncoding.EncodeToString(nextPageState)
+	c.JSON(200, gin.H{"logs": logs, "count": len(logs), "cached": false, "nextPageState": nextPageStateStr})
 }
 
 func PostLog(c *gin.Context) {
