@@ -3,8 +3,10 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"server/config"
 	"server/initializers"
 	"server/types"
+	"server/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,10 +23,17 @@ func CountLogs(c *gin.Context) {
 }
 
 func GetLogs(c *gin.Context) {
-	limit := c.Query("limit")
-	if limit == "" {
-		limit = "10"
+	limit := c.DefaultQuery("limit", "10")
+
+	searchHash := utils.GetHash(c)
+	cachedLogs := config.GetCache(searchHash)
+	// fmt.Println("cachedLogs: ", cachedLogs)
+
+	if cachedLogs != nil {
+		c.JSON(200, gin.H{"logs": cachedLogs, "count": len(cachedLogs), "cached": true})
+		return
 	}
+
 	q := initializers.DB.Query("SELECT * FROM argus_logs.logs LIMIT ?", limit)
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
 	var logs []types.Log
@@ -57,7 +66,10 @@ func GetLogs(c *gin.Context) {
 		c.JSON(404, gin.H{"message": "No logs found"})
 		return
 	}
-	c.JSON(200, gin.H{"logs": logs, "count": len(logs)})
+
+	go config.SetCache(searchHash, logs)
+
+	c.JSON(200, gin.H{"logs": logs, "count": len(logs), "cached": false})
 }
 
 func PostLog(c *gin.Context) {

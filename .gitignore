@@ -1,1 +1,4 @@
 ingestion-server2/.env
+ingestion-server2/logs
+ingestion-server2/logs/info.log
+ingestion-server2/logs/warn.log

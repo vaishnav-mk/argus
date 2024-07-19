@@ -17,7 +17,6 @@ var CacheExpirationTime = time.Minute * 2
 func ConnectToCache() {
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     CONFIG.REDIS_HOST + ":" + CONFIG.REDIS_PORT,
-		Password: CONFIG.REDIS_PASSWORD,
 		DB:       0,
 		PoolSize: 1000,
 	})
