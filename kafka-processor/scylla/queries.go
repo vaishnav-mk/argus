@@ -16,6 +16,7 @@ type Log struct {
 	SpanID     string                 `json:"spanID"`
 	Commit     string                 `json:"commit"`
 	Metadata   map[string]interface{} `json:"metadata"`
+	Service    string                 `json:"service"`
 }
 
 func CountLogs(session *gocql.Session, context *gin.Context) {
@@ -31,10 +32,10 @@ func CountLogs(session *gocql.Session, context *gin.Context) {
 
 func GetLogs(session *gocql.Session, context *gin.Context, x int) {
 	q := session.Query("SELECT * FROM argus_logs.logs LIMIT ?", x)
-	var level, message, resourceID, timestamp, traceID, spanID, commit string
+	var level, message, resourceID, timestamp, traceID, spanID, commit, service string
 	var logs []Log
 	it := q.Iter()
-	for it.Scan(&level, &message, &resourceID, &timestamp, &traceID, &spanID, &commit) {
+	for it.Scan(&level, &message, &resourceID, &timestamp, &traceID, &spanID, &commit, &service) {
 		logs = append(logs, Log{
 			Level:      level,
 			Message:    message,
@@ -43,6 +44,7 @@ func GetLogs(session *gocql.Session, context *gin.Context, x int) {
 			TraceID:    traceID,
 			SpanID:     spanID,
 			Commit:     commit,
+			Service:    service,
 		})
 	}
 	if err := it.Close(); err != nil {

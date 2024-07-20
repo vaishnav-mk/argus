@@ -13,6 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type PageStateRequest struct {
+	PageState string `json:"page_state"`
+}
+
 func CountLogs(c *gin.Context) {
 	q := initializers.DB.Query("SELECT COUNT(*) FROM argus_logs.logs")
 	var count int
@@ -25,12 +29,17 @@ func CountLogs(c *gin.Context) {
 }
 
 func GetLogs(c *gin.Context) {
+	var pageStateRequest PageStateRequest
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "25"))
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Invalid limit"})
 		return
 	}
-	pageStateParam := c.DefaultQuery("page_state", "")
+	if err := c.BindJSON(&pageStateRequest); err != nil {
+		c.JSON(400, gin.H{"message": "Invalid pageState"})
+		return
+	}
+	pageStateParam := pageStateRequest.PageState
 	fmt.Println("page: ", pageStateParam)
 	var pageState []byte
 	if pageStateParam != "" {
@@ -53,10 +62,10 @@ func GetLogs(c *gin.Context) {
 	}
 
 	q := initializers.DB.Query("SELECT * FROM argus_logs.logs").PageSize(limit).PageState(pageState)
-	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
+	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
 	var logs []types.Log
 	it := q.Iter()
-	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &spanID, &traceID) {
+	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &service, &traceID, &spanID) {
 		metadataBytes := []byte(metadata)
 		var metadataMap map[string]interface{}
 		err := json.Unmarshal(metadataBytes, &metadataMap)
@@ -73,6 +82,7 @@ func GetLogs(c *gin.Context) {
 			SpanID:     spanID,
 			Commit:     commit,
 			Metadata:   metadataMap,
+			Service:    service,
 		})
 	}
 	nextPageState := it.PageState()
@@ -117,8 +127,8 @@ func PostLog(c *gin.Context) {
 func GetLog(c *gin.Context) {
 	logID := c.Param("log_id")
 	q := initializers.DB.Query("SELECT * FROM argus_logs.logs WHERE timestamp = ?", logID)
-	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata string
-	if err := q.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &spanID, &traceID); err != nil {
+	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
+	if err := q.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &spanID, &traceID, &service); err != nil {
 		c.JSON(404, gin.H{"message": "Log not found"})
 		return
 	}
@@ -139,6 +149,7 @@ func GetLog(c *gin.Context) {
 		SpanID:     spanID,
 		Commit:     commit,
 		Metadata:   metadataMap,
+		Service:    service,
 	}
 	c.JSON(200, gin.H{"log": log})
 }

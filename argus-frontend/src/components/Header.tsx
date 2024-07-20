@@ -98,14 +98,6 @@ export function Header() {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" className="hidden sm:flex">
-            {/* <DownloadIcon className="h-4 w-4 mr-2" /> */}
-            Export
-          </Button>
-          <Button variant="outline" className="hidden sm:flex">
-            <ListOrderedIcon className="h-4 w-4 mr-2" />
-            Sort
-          </Button>
         </div>
       </div>
     </header>

@@ -10,7 +10,7 @@ import (
 func LogRouter(config *gin.Engine) {
 	logs := config.Group("/logs")
 	{
-		logs.GET("/", middlewares.AddUUID, controllers.GetLogs)
+		logs.POST("/data", middlewares.AddUUID, controllers.GetLogs)
 		logs.GET("/count", middlewares.AddUUID, controllers.CountLogs)
 		logs.GET("/:log_id", middlewares.AddUUID, controllers.GetLog)
 

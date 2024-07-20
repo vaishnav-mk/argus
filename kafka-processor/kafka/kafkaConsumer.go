@@ -17,6 +17,7 @@ type Log struct {
 	SpanID     string                 `json:"spanID"`
 	Commit     string                 `json:"commit"`
 	Metadata   map[string]interface{} `json:"metadata"`
+	Service    string                 `json:"service"`
 }
 
 func KafkaConsumer(kafkaBrokerHost string, logChannel chan Log, topics []string) {

@@ -9,6 +9,7 @@ type Log struct {
 	SpanID     string                 `json:"traceID"`
 	Commit     string                 `json:"commit"`
 	Metadata   map[string]interface{} `json:"metadata"`
+	Service    string                 `json:"service"`
 }
 
 type Message struct {

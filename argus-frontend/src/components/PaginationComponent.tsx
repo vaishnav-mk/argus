@@ -1,4 +1,3 @@
-// components/PaginationComponent.tsx
 import { useEffect, useState } from "react";
 import {
   Pagination,
@@ -21,18 +20,30 @@ export function PaginationComponent({
   nextPageState,
   onPageChange,
 }: PaginationComponentProps) {
-  const [pageNumbers, setPageNumbers] = useState<number[]>([1]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  useEffect(() => {
-    if (nextPageState && pageNumbers.length < 3) {
-      setPageNumbers((prev) => [...prev, prev.length + 1]);
-    }
-  }, [nextPageState, pageNumbers.length]);
-
-  const handlePageChange = (pageState: string | null) => {
+  const handlePageChange = (pageState: string | null, pageNumber: number) => {
     if (pageState !== currentPageState) {
+      setCurrentPage(pageNumber);
       onPageChange(pageState);
     }
+  };
+
+  const renderPageNumbers = () => {
+    let pages = [];
+    for (let i = 0; i < 3; i++) {
+      pages.push(
+        <PaginationItem key={currentPage + i - 1}>
+          <PaginationLink
+            onClick={() => handlePageChange(`page_${currentPage + i - 1}`, currentPage + i - 1)}
+            isActive={currentPage === currentPage + i - 1}
+          >
+            {currentPage + i - 1}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    return pages;
   };
 
   return (
@@ -40,21 +51,11 @@ export function PaginationComponent({
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious
-            onClick={() => handlePageChange(null)}
-            disabled={!currentPageState}
+            onClick={() => handlePageChange(null, currentPage - 1)}
+            disabled={currentPage === 1}
           />
         </PaginationItem>
-        {pageNumbers.map((pageNumber) => (
-          <PaginationItem key={pageNumber}>
-            <PaginationLink
-              href="#"
-              onClick={() => handlePageChange(currentPageState)}
-              isActive={pageNumber === pageNumbers[pageNumbers.length - 1]}
-            >
-              {pageNumber}
-            </PaginationLink>
-          </PaginationItem>
-        ))}
+        {renderPageNumbers()}
         {nextPageState && (
           <PaginationItem>
             <PaginationEllipsis />
@@ -62,7 +63,8 @@ export function PaginationComponent({
         )}
         <PaginationItem>
           <PaginationNext
-            onClick={() => handlePageChange(nextPageState)}
+            onClick={() => handlePageChange(nextPageState, currentPage + 1)}
+            disabled={!nextPageState}
           />
         </PaginationItem>
       </PaginationContent>

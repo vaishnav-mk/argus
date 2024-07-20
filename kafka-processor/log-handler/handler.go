@@ -63,8 +63,9 @@ func insertLogToScylla(session *gocql.Session, log kafka.Log) error {
 		stringifiedMetadata = string(metadataBytes)
 	}
 
-	err := session.Query(`INSERT INTO argus_logs.logs (trace_id, span_id, level, message, resource_id, timestamp, commit, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		log.TraceID, log.SpanID, log.Level, log.Message, log.ResourceID, log.Timestamp, log.Commit, stringifiedMetadata).Exec()
+	fmt.Println("Service:", log.Service)
+	err := session.Query(`INSERT INTO argus_logs.logs (service, span_id, level, message, resource_id, timestamp, commit, metadata, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		log.Service, log.SpanID, log.Level, log.Message, log.ResourceID, log.Timestamp, log.Commit, stringifiedMetadata, log.TraceID).Exec()
 	if err != nil {
 		fmt.Printf("Error inserting log to ScyllaDB: %v\n", err)
 		return err
