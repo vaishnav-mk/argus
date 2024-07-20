@@ -25,15 +25,18 @@ func CountLogs(c *gin.Context) {
 }
 
 func GetLogs(c *gin.Context) {
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "25"))
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Invalid limit"})
 		return
 	}
 	pageStateParam := c.DefaultQuery("page_state", "")
+	fmt.Println("page: ", pageStateParam)
 	var pageState []byte
 	if pageStateParam != "" {
 		pageState, err = base64.StdEncoding.DecodeString(pageStateParam)
+		fmt.Println("PSerr: ", err)
+		fmt.Println("PS: ", pageState)
 		if err != nil {
 			c.JSON(400, gin.H{"message": "Invalid pageState"})
 			return

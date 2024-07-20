@@ -52,11 +52,6 @@ func worker(writer *kafka.Writer, logChannel chan types.Message, wg *sync.WaitGr
 				Value: message,
 			})
 
-			fmt.Printf("Total logs in batch for Kafka topic %s: %d\n", topic, len(batch))
-			fmt.Printf("Total logs in channel: %d\n", len(logChannel))
-			fmt.Printf("Total logs in writer: %d\n", writer.Stats().Writes)
-			fmt.Printf("Log: %v\n", log.Message)
-
 			if len(batch) == batchSize || timer.C != nil {
 				err := writeToKafka(writer, batch)
 				if err != nil {
