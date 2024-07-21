@@ -36,8 +36,12 @@ func GetLogs(c *gin.Context) {
 		return
 	}
 	if err := c.BindJSON(&pageStateRequest); err != nil {
-		c.JSON(400, gin.H{"message": "Invalid pageState"})
-		return
+		if err := c.BindQuery(&pageStateRequest); err != nil {
+			pageStateRequest.PageState = ""
+		} else {
+			c.JSON(400, gin.H{"message": "Invalid pageState"})
+			return
+		}
 	}
 	pageStateParam := pageStateRequest.PageState
 	fmt.Println("page: ", pageStateParam)
@@ -65,7 +69,7 @@ func GetLogs(c *gin.Context) {
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
 	var logs []types.Log
 	it := q.Iter()
-	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &service, &traceID, &spanID) {
+	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &service, &spanID, &traceID) {
 		metadataBytes := []byte(metadata)
 		var metadataMap map[string]interface{}
 		err := json.Unmarshal(metadataBytes, &metadataMap)

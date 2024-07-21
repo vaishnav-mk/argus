@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -21,6 +22,7 @@ import {
   CircleIcon,
   RefreshCwIcon,
   ListOrderedIcon,
+  SearchIcon,
 } from "@/components/icons/icons";
 import { PaginationComponent } from "@/components/PaginationComponent";
 import {
@@ -30,7 +32,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function badge(level: string) {
   switch (level) {
@@ -86,6 +90,20 @@ export function TableSection() {
   const [currentPageState, setCurrentPageState] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [sortData, setSortData] = useState<any>({});
+  const [search, setSearch] = useState<string>("");
+  const [searchedData, setSearchedData] = useState<any[]>([]);
+
+  const searchData = data.filter((row) =>
+    Object.values(row).some((value) =>
+      value.toString().toLowerCase().includes(search.toLowerCase())
+    )
+  );
+
+  useEffect(() => {
+    if (search !== "") {
+      setSearchedData(searchData);
+    }
+  }, [search, searchData]);
 
   const fetchData = useCallback((pageState: string | null = null) => {
     setLoading(true);
@@ -116,7 +134,7 @@ export function TableSection() {
     <div className="p-4 sm:p-6">
       <Card>
         <CardHeader>
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center gap-10">
             <div>
               <CardTitle>Log Search Results</CardTitle>
               <CardDescription>
@@ -124,6 +142,15 @@ export function TableSection() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <div className="relative flex-1">
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search logs..."
+                  className="w-full rounded-md bg-muted pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">Export</Button>
@@ -139,26 +166,40 @@ export function TableSection() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <Button
-                variant="outline"
-                className="hidden sm:flex"
-                onClick={() => {
-                  const sortedData = sort(
-                    data,
-                    "timestamp",
-                    sortData.direction
-                  );
-                  setSortData({
-                    key: "timestamp",
-                    direction: sortData.direction === "asc" ? "desc" : "asc",
-                  });
-                  setData([...sortedData]);
-                }}
-              >
-                <ListOrderedIcon className="h-4 w-4 mr-2" />
-                Sort
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="hidden sm:flex">
+                    <ListOrderedIcon className="h-4 w-4 mr-2" />
+                    Sort
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {data.length > 0 &&
+                    Object.keys(data[0]).map((key) => (
+                      <DropdownMenuCheckboxItem
+                        checked={sortData.key === key}
+                        key={key}
+                        onClick={() => {
+                          const sortedData = sort(
+                            data,
+                            key,
+                            sortData.direction
+                          );
+                          setSortData({
+                            key,
+                            direction:
+                              sortData.direction === "asc" ? "desc" : "asc",
+                          });
+                          setData([...sortedData]);
+                        }}
+                      >
+                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
@@ -178,21 +219,69 @@ export function TableSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((row) => (
-                <TableRow key={row.timestamp}>
-                  <TableCell>{row.timestamp}</TableCell>
-                  <TableCell>{row.traceID}</TableCell>
-                  <TableCell>
-                    <Badge variant={badge(row.level)}>{row.level}</Badge>
-                  </TableCell>
-                  <TableCell>{row.message}</TableCell>
-                  <TableCell>{row.resourceID}</TableCell>
-                  <TableCell>{row.service}</TableCell>
-                  <TableCell>{row.spanID}</TableCell>
-                  <TableCell>{row.commit}</TableCell>
-                  <TableCell>{row.metadata.parentResourceId}</TableCell>
-                </TableRow>
-              ))}
+              {loading
+                ? Array.from({ length: 10 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="w-24 h-4" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : search !== ""
+                ? searchedData.map((row) => (
+                    <TableRow key={row.timestamp}>
+                      <TableCell>{row.timestamp}</TableCell>
+                      <TableCell>{row.traceID}</TableCell>
+                      <TableCell>
+                        <Badge variant={badge(row.level)}>{row.level}</Badge>
+                      </TableCell>
+                      <TableCell>{row.message}</TableCell>
+                      <TableCell>{row.resourceID}</TableCell>
+                      <TableCell>{row.service}</TableCell>
+                      <TableCell>{row.spanID}</TableCell>
+                      <TableCell>{row.commit}</TableCell>
+                      <TableCell>{row.metadata.parentResourceId}</TableCell>
+                    </TableRow>
+                  ))
+                : data.map((row) => (
+                    <TableRow key={row.timestamp}>
+                      <TableCell>{row.timestamp}</TableCell>
+                      <TableCell>{row.traceID}</TableCell>
+                      <TableCell>
+                        <Badge variant={badge(row.level)}>{row.level}</Badge>
+                      </TableCell>
+                      <TableCell>{row.message}</TableCell>
+                      <TableCell>{row.resourceID}</TableCell>
+                      <TableCell>{row.service}</TableCell>
+                      <TableCell>{row.spanID}</TableCell>
+                      <TableCell>{row.commit}</TableCell>
+                      <TableCell>{row.metadata.parentResourceId}</TableCell>
+                    </TableRow>
+                  ))}
             </TableBody>
           </Table>
         </CardContent>
@@ -212,7 +301,9 @@ export function TableSection() {
               size="icon"
               onClick={() => fetchData(currentPageState)}
             >
-              <RefreshCwIcon className="h-5 w-5" />
+              <RefreshCwIcon
+                className={`h-5 w-5 ${loading ? "animate-spin" : ""}`}
+              />
               <span className="sr-only">Refresh</span>
             </Button>
           </div>

@@ -34,9 +34,15 @@ interface ChartCardProps {
 }
 
 function areaChart(data: { name: string; value: number }[]) {
+  let timestamps = []
+  let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  months.forEach((month) => {
+    timestamps.push({ name: month, value: Math.floor(Math.random() * 100) })
+  })
+  console.log({ timestamps });
   return (
     <AreaChart
-      data={data}
+      data={timestamps}
       margin={{
         left: 12,
         right: 12,
@@ -66,6 +72,9 @@ function areaChart(data: { name: string; value: number }[]) {
 }
 
 function pieChart(data: { name: string; value: number }[]) {
+  if (data.length === 0) {
+    return null;
+  }
   const chartConfig = {
     services: {
       label: "Services",
@@ -111,7 +120,9 @@ function pieChart(data: { name: string; value: number }[]) {
           nameKey="name"
           innerRadius={60}
           strokeWidth={5}
-          activeIndex={data.findIndex(({ value }) => value === Math.max(...data.map(({ value }) => value)))}
+          activeIndex={data?.findIndex(
+            ({ value }) => value === Math.max(...data.map(({ value }) => value))
+          )}
           activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => (
             <Sector {...props} outerRadius={outerRadius + 10} />
           )}

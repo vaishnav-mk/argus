@@ -46,19 +46,25 @@ export function ChartSection() {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log({ received: data });
-        let servicesData = []
+        let servicesData = [];
         data.logs.forEach((log) => {
-          console.log({ log });
           if (servicesData.some((service) => service.name === log.service)) {
-            servicesData.find((service) => service.name === log.service).value += 1;
+            servicesData.find(
+              (service) => service.name === log.service
+            ).value += 1;
           } else {
-            servicesData.push({ name: log.service, value: 1, fill: `var(--color-${log.service})` });
+            servicesData.push({
+              name: log.service,
+              value: 1,
+              fill: `var(--color-${log.service})`,
+            });
           }
-        })
-       
-        console.log({ servicesData });
-        setData(servicesData);
+        });
+
+        setData({
+          data: data.logs,
+          services: servicesData,
+        });
         setLoading(false);
       })
       .catch((err) => {
@@ -77,19 +83,23 @@ export function ChartSection() {
 
   console.log({ data });
 
+  if (Object.keys(data).length === 0) {
+    return <div>No data available</div>;
+  }
+
   return (
     <main className="flex-1 ">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 sm:p-6">
         <ChartCard
           title="Errors"
           description="Visualize the number of errors over time."
-          data={exampleData.errors}
+          data={data.data}
           type="area"
         />
         <ChartCard
           title="Error Services"
           description="Visualize the number of errors per service."
-          data={data}
+          data={data.services}
           type="pie"
         />
         <ChartCard

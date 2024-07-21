@@ -11,8 +11,6 @@ export async function POST(request) {
 
   console.log("page_state", page_state);
 
-  //remove whitespace
-
   const response = await fetch(`http://localhost:5000/logs/data?limit=${limit}`, {
     headers: {
       "Content-Type": "application/json",
