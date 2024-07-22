@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"server/config"
 	"server/initializers"
 	"server/types"
@@ -14,10 +16,16 @@ import (
 )
 
 type PageStateRequest struct {
-	PageState string `json:"page_state"`
+	PageState *string `json:"page_state"`
 }
 
 func CountLogs(c *gin.Context) {
+	// cachedCount := config.GetCache("log_count")
+	// if cachedCount.Count != 0 {
+	// 	c.JSON(200, gin.H{"count": cachedCount.Count, "cached": true})
+	// 	return
+	// }
+
 	q := initializers.DB.Query("SELECT COUNT(*) FROM argus_logs.logs")
 	var count int
 	err := q.Scan(&count)
@@ -35,15 +43,20 @@ func GetLogs(c *gin.Context) {
 		c.JSON(400, gin.H{"message": "Invalid limit"})
 		return
 	}
+
 	if err := c.BindJSON(&pageStateRequest); err != nil {
-		if err := c.BindQuery(&pageStateRequest); err != nil {
-			pageStateRequest.PageState = ""
-		} else {
+		log.Println("Error binding JSON:", err)
+		if err != io.EOF {
 			c.JSON(400, gin.H{"message": "Invalid pageState"})
 			return
 		}
 	}
-	pageStateParam := pageStateRequest.PageState
+
+	pageStateParam := ""
+	if pageStateRequest.PageState != nil {
+		pageStateParam = *pageStateRequest.PageState
+	}
+
 	fmt.Println("page: ", pageStateParam)
 	var pageState []byte
 	if pageStateParam != "" {
@@ -66,6 +79,7 @@ func GetLogs(c *gin.Context) {
 	}
 
 	q := initializers.DB.Query("SELECT * FROM argus_logs.logs").PageSize(limit).PageState(pageState)
+
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
 	var logs []types.Log
 	it := q.Iter()

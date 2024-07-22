@@ -22,7 +22,7 @@ func ConnectToCache() {
 	})
 
 	if err := RedisClient.Ping(ctx).Err(); err != nil {
-		fmt.Println("Redis connection Error: %v", err)
+		fmt.Println("Redis connection Error: ", err)
 	} else {
 		fmt.Println("Connected to redis!")
 	}

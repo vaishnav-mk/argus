@@ -131,7 +131,7 @@ export function TableSection() {
   }, [fetchData]);
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="w-full">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center gap-10">

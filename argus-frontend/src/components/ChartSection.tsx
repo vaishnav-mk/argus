@@ -88,8 +88,8 @@ export function ChartSection() {
   }
 
   return (
-    <main className="flex-1 ">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 sm:p-6">
+    <main className="">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <ChartCard
           title="Errors"
           description="Visualize the number of errors over time."

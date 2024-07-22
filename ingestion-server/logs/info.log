@@ -1213,3 +1213,11 @@ Sun, 21 Jul 2024 16:08:45 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0
 Sun, 21 Jul 2024 16:08:45 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
 Sun, 21 Jul 2024 16:08:45 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
 Sun, 21 Jul 2024 16:08:45 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:12 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:12 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:12 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:12 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:26 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:26 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:26 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}
+Sun, 21 Jul 2024 22:21:26 IST	warn	Failed to set cache	{"Error": "dial tcp 127.0.0.1:6379: connect: connection refused"}

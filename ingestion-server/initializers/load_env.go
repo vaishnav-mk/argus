@@ -27,6 +27,7 @@ type Config struct {
 	JWT_SECRET      string      `mapstructure:"JWT_SECRET"`
 	FRONTEND_URL    string      `mapstructure:"FRONTEND_URL"`
 	AUTH_TOKEN      string      `mapstructure:"AUTH_TOKEN"`
+	CACHING         bool        `mapstructure:"CACHING"`
 	// POPULATE_USERS bool        `mapstructure:"POPULATE_USERS"`
 	// POPULATE_LOGS  bool        `mapstructure:"POPULATE_LOGS"`
 }
