@@ -1,65 +1,185 @@
-import { useEffect, useState, useCallback } from "react";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+"use client";
+
+import * as React from "react";
 import {
   CircleIcon,
   RefreshCwIcon,
   ListOrderedIcon,
   SearchIcon,
 } from "@/components/icons/icons";
-import { PaginationComponent } from "@/components/PaginationComponent";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllLogs } from "@/redux/slice/dataSlice";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-function badge(level: string) {
-  switch (level) {
-    case "info":
-      return "success";
-    case "warn":
-      return "warning";
-    case "error":
-      return "destructive";
-    default:
-      return "neutral";
-  }
-}
+export const columns: ColumnDef<any>[] = [
+  {
+    id: "select",
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Select all"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Select row"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+  {
+    accessorKey: "timestamp",
+    header: "Timestamp",
+    cell: ({ row }) => (
+      <div>{new Date(row.getValue("timestamp")).toLocaleString()}</div>
+    ),
+  },
+  {
+    accessorKey: "service",
+    header: "Service",
+    cell: ({ row }) => <div>{row.getValue("service")}</div>,
+  },
+  {
+    accessorKey: "level",
+    header: "Log Level",
+    cell: ({ row }) => (
+      <div className="capitalize">{row.getValue("level")}</div>
+    ),
+  },
+  {
+    accessorKey: "message",
+    header: "Message",
+    cell: ({ row }) => <div>{row.getValue("message")}</div>,
+  },
+  {
+    accessorKey: "resourceID",
+    header: "Resource ID",
+    cell: ({ row }) => <div>{row.getValue("resourceID")}</div>,
+  },
+  {
+    accessorKey: "traceID",
+    header: "Trace ID",
+    cell: ({ row }) => <div>{row.getValue("traceID")}</div>,
+  },
+  {
+    accessorKey: "spanID",
+    header: "Span ID",
+    cell: ({ row }) => <div>{row.getValue("spanID")}</div>,
+  },
+  {
+    accessorKey: "commit",
+    header: "Commit",
+    cell: ({ row }) => <div>{row.getValue("commit")}</div>,
+  },
+  {
+    accessorKey: "metadata.parentResourceId",
+    header: "Parent Resource ID",
+    cell: ({ row }) => <div>{row.getValue("metadata.parentResourceId")}</div>,
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const log = row.original;
 
-function toJSON(data: any[]) {
-  return JSON.stringify(data, null, 2);
-}
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(log.traceID)}
+            >
+              Copy Trace ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>View details</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    },
+  },
+];
 
-function toCSV(data: any[]) {
+const ExportDropdown = ({ data }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="outline">Export</Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuLabel>Export format</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onClick={() => exportData(data, "csv")}>
+        CSV
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => exportData(data, "json")}>
+        JSON
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
+const toJSON = (data) => JSON.stringify(data, null, 2);
+
+const toCSV = (data) => {
   const headers = Object.keys(data[0]).join(",");
   const rows = data.map((row) => Object.values(row).join(","));
   return [headers, ...rows].join("\n");
-}
+};
 
-function exportData(data: any[], format: string) {
+const exportData = (data, format) => {
   const fileName = `logs-${new Date().toISOString()}`;
   const dataStr = format === "csv" ? toCSV(data) : toJSON(data);
   const dataUri = `data:text/${format};charset=utf-8,${dataStr}`;
@@ -70,9 +190,9 @@ function exportData(data: any[], format: string) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
+};
 
-function sort(data: any[], key: string, order: "asc" | "desc" = "asc") {
+const sortData = (data, key, order = "asc") => {
   return data.sort((a, b) => {
     if (a[key] < b[key]) {
       return order === "asc" ? -1 : 1;
@@ -82,233 +202,215 @@ function sort(data: any[], key: string, order: "asc" | "desc" = "asc") {
     }
     return 0;
   });
-}
+};
+
+const SortDropdown = ({ data, sortData, setSortData }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="outline" className="hidden sm:flex">
+        <ListOrderedIcon className="h-4 w-4 mr-2" />
+        Sort
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      {data?.length > 0 &&
+        Object.keys(data?.at(0)).map((key) => (
+          <DropdownMenuCheckboxItem
+            checked={sortData.key === key}
+            key={key}
+            onClick={() => {
+              const sortedData = sortData(data, key, sortData.direction);
+              setSortData({
+                key,
+                direction: sortData.direction === "asc" ? "desc" : "asc",
+              });
+              setData([...sortedData]);
+            }}
+          >
+            {key.charAt(0).toUpperCase() + key.slice(1)}
+          </DropdownMenuCheckboxItem>
+        ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
 
 export function TableSection() {
-  const [data, setData] = useState<any[]>([]);
-  const [nextPageState, setNextPageState] = useState<string | null>(null);
-  const [currentPageState, setCurrentPageState] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [sortData, setSortData] = useState<any>({});
-  const [search, setSearch] = useState<string>("");
-  const [searchedData, setSearchedData] = useState<any[]>([]);
+  const {
+    isError,
+    errorMessage: errors,
+    logs: data,
+    nextPageState: pageState,
+    isLoading: loading,
+  } = useSelector((state) => state.data);
 
-  const searchData = data.filter((row) =>
-    Object.values(row).some((value) =>
-      value.toString().toLowerCase().includes(search.toLowerCase())
-    )
+  const dispatch = useDispatch();
+
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
   );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
-  useEffect(() => {
-    if (search !== "") {
-      setSearchedData(searchData);
-    }
-  }, [search, searchData]);
-
-  const fetchData = useCallback((pageState: string | null = null) => {
-    setLoading(true);
-    const url = "/api/data";
-
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ page_state: pageState || "" }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setData(data.logs);
-        setNextPageState(data.nextPageState);
-        setCurrentPageState(pageState);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const table = useReactTable({
+    data,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  });
 
   return (
-    <div className="w-full">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center gap-10">
-            <div>
-              <CardTitle>Log Search Results</CardTitle>
-              <CardDescription>
-                View the search results for your log data.
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search logs..."
-                  className="w-full rounded-md bg-muted pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">Export</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Export format</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => exportData(data, "csv")}>
-                    CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportData(data, "json")}>
-                    JSON
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="hidden sm:flex">
-                    <ListOrderedIcon className="h-4 w-4 mr-2" />
-                    Sort
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {data.length > 0 &&
-                    Object.keys(data[0]).map((key) => (
+    <Card className="w-full">
+      <CardHeader>
+        <div className="flex justify-between items-center gap-10">
+          <div>
+            <CardTitle>Log Search Results</CardTitle>
+            <CardDescription>
+              View the search results for your log data.
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            {/* <SearchInput setSearch={setSearch} /> */}
+            <ExportDropdown data={data} />
+            <SortDropdown
+              data={data}
+              sortData={sortData}
+              // setSortData={setSortData}
+            />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="w-full">
+          <div className="flex items-center py-4">
+            <Input
+              placeholder="Filter logs..."
+              value={
+                (table.getColumn("message")?.getFilterValue() as string) ?? ""
+              }
+              onChange={(event) =>
+                table.getColumn("message")?.setFilterValue(event.target.value)
+              }
+              className="max-w-sm"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="ml-auto">
+                  Columns <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => {
+                    return (
                       <DropdownMenuCheckboxItem
-                        checked={sortData.key === key}
-                        key={key}
-                        onClick={() => {
-                          const sortedData = sort(
-                            data,
-                            key,
-                            sortData.direction
-                          );
-                          setSortData({
-                            key,
-                            direction:
-                              sortData.direction === "asc" ? "desc" : "asc",
-                          });
-                          setData([...sortedData]);
-                        }}
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(!!value)
+                        }
                       >
-                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                        {column.id}
                       </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Log Level</TableHead>
-                <TableHead>Message</TableHead>
-                <TableHead>Resource ID</TableHead>
-                <TableHead>Trace ID</TableHead>
-                <TableHead>Span ID</TableHead>
-                <TableHead>Commit</TableHead>
-                <TableHead>Metadata.parentResourceId</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading
-                ? Array.from({ length: 10 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="w-24 h-4" />
-                      </TableCell>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))
-                : search !== ""
-                ? searchedData.map((row) => (
-                    <TableRow key={row.timestamp}>
-                      <TableCell>{row.timestamp}</TableCell>
-                      <TableCell>{row.traceID}</TableCell>
-                      <TableCell>
-                        <Badge variant={badge(row.level)}>{row.level}</Badge>
-                      </TableCell>
-                      <TableCell>{row.message}</TableCell>
-                      <TableCell>{row.resourceID}</TableCell>
-                      <TableCell>{row.service}</TableCell>
-                      <TableCell>{row.spanID}</TableCell>
-                      <TableCell>{row.commit}</TableCell>
-                      <TableCell>{row.metadata.parentResourceId}</TableCell>
-                    </TableRow>
-                  ))
-                : data.map((row) => (
-                    <TableRow key={row.timestamp}>
-                      <TableCell>{row.timestamp}</TableCell>
-                      <TableCell>{row.traceID}</TableCell>
-                      <TableCell>
-                        <Badge variant={badge(row.level)}>{row.level}</Badge>
-                      </TableCell>
-                      <TableCell>{row.message}</TableCell>
-                      <TableCell>{row.resourceID}</TableCell>
-                      <TableCell>{row.service}</TableCell>
-                      <TableCell>{row.spanID}</TableCell>
-                      <TableCell>{row.commit}</TableCell>
-                      <TableCell>{row.metadata.parentResourceId}</TableCell>
-                    </TableRow>
-                  ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-        <CardFooter className="flex items-center justify-between">
-          <PaginationComponent
-            currentPageState={currentPageState}
-            nextPageState={nextPageState}
-            onPageChange={(pageState) => fetchData(pageState)}
-          />
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <CircleIcon className="h-3 w-3 text-green-500" />
-              Connected
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => fetchData(currentPageState)}
-            >
-              <RefreshCwIcon
-                className={`h-5 w-5 ${loading ? "animate-spin" : ""}`}
-              />
-              <span className="sr-only">Refresh</span>
-            </Button>
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </CardFooter>
-      </Card>
-    </div>
+          <div className="flex items-center justify-end space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </div>
+            <div className="space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

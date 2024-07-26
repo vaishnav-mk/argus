@@ -5,11 +5,8 @@ export async function POST(request) {
 
   const reqData = await request.json();
 
-  console.log("data", reqData);
   const page_state = reqData.page_state;
   const limit = params.get("limit") || 25;
-
-  console.log("page_state", page_state);
 
   const response = await fetch(`http://localhost:5000/logs/data?limit=${limit}`, {
     headers: {

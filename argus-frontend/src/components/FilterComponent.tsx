@@ -5,7 +5,6 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -23,20 +22,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 
+const filterOptions = [
+  {
+    key: "level",
+    label: "Level",
+    options: ["debug", "info", "warn", "error", "fatal"],
+  },
+  { key: "message", label: "Message" },
+  { key: "resourceId", label: "Resource ID" },
+  { key: "traceId", label: "Trace ID" },
+  { key: "spanId", label: "Span ID" },
+  { key: "commit", label: "Commit" },
+  { key: "metadata.parentResourceId", label: "Parent Resource ID" },
+  { key: "regex", label: "Regular Expression" },
+];
+
 export function FilterComponent() {
-  const [filters, setFilters] = useState({
-    level: ["debug", "info", "warn", "error", "fatal"],
-    message: "",
-    resourceId: "",
-    traceId: "",
-    spanId: "",
-    commit: "",
-    "metadata.parentResourceId": "",
-  });
+  const [filters, setFilters] = useState(
+    filterOptions.reduce((acc, { key }) => ({ ...acc, [key]: "" }), {
+      level: ["debug", "info", "warn", "error", "fatal"],
+    })
+  );
   const [useRegex, setUseRegex] = useState(false);
 
   const handleFilter = (key: string, value: string | string[]) => {
-    setFilters({ ...filters, [key]: value });
+    setFilters((prevFilters) => ({ ...prevFilters, [key]: value }));
   };
 
   const handleRegexToggle = (checked: boolean) => {
@@ -44,7 +54,7 @@ export function FilterComponent() {
   };
 
   return (
-    <Card className="h-">
+    <Card>
       <CardHeader>
         <CardTitle>Filters</CardTitle>
         <CardDescription>
@@ -52,120 +62,44 @@ export function FilterComponent() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              <span>Level</span>
-              <ChevronDownIcon className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuCheckboxItem
-              checked={filters.level.includes("debug")}
-              onCheckedChange={(checked) =>
-                handleFilter(
-                  "level",
-                  checked
-                    ? [...filters.level, "debug"]
-                    : filters.level.filter((l) => l !== "debug")
-                )
-              }
-            >
-              Debug
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filters.level.includes("info")}
-              onCheckedChange={(checked) =>
-                handleFilter(
-                  "level",
-                  checked
-                    ? [...filters.level, "info"]
-                    : filters.level.filter((l) => l !== "info")
-                )
-              }
-            >
-              Info
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filters.level.includes("warn")}
-              onCheckedChange={(checked) =>
-                handleFilter(
-                  "level",
-                  checked
-                    ? [...filters.level, "warn"]
-                    : filters.level.filter((l) => l !== "warn")
-                )
-              }
-            >
-              Warn
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filters.level.includes("error")}
-              onCheckedChange={(checked) =>
-                handleFilter(
-                  "level",
-                  checked
-                    ? [...filters.level, "error"]
-                    : filters.level.filter((l) => l !== "error")
-                )
-              }
-            >
-              Error
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filters.level.includes("fatal")}
-              onCheckedChange={(checked) =>
-                handleFilter(
-                  "level",
-                  checked
-                    ? [...filters.level, "fatal"]
-                    : filters.level.filter((l) => l !== "fatal")
-                )
-              }
-            >
-              Fatal
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Input
-          placeholder="Message"
-          value={filters.message}
-          onChange={(e) => handleFilter("message", e.target.value)}
-        />
-        <Input
-          placeholder="Resource ID"
-          value={filters.resourceId}
-          onChange={(e) => handleFilter("resourceId", e.target.value)}
-        />
-        <div />
-        <Input
-          placeholder="Trace ID"
-          value={filters.traceId}
-          onChange={(e) => handleFilter("traceId", e.target.value)}
-        />
-        <Input
-          placeholder="Span ID"
-          value={filters.spanId}
-          onChange={(e) => handleFilter("spanId", e.target.value)}
-        />
-        <Input
-          placeholder="Commit"
-          value={filters.commit}
-          onChange={(e) => handleFilter("commit", e.target.value)}
-        />
-        <Input
-          placeholder="Parent Resource ID"
-          value={filters["metadata.parentResourceId"]}
-          onChange={(e) =>
-            handleFilter("metadata.parentResourceId", e.target.value)
-          }
-        />
-        <Input
-          placeholder="Regular Expression"
-          value={filters["regex"]}
-          onChange={(e) => handleFilter("regex", e.target.value)}
-        />
-        <div />
+        {filterOptions.map(({ key, label, options }) => (
+          <div key={key}>
+            {options ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span>{label}</span>
+                    <ChevronDownIcon className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {options.map((option) => (
+                    <DropdownMenuCheckboxItem
+                      key={option}
+                      checked={filters[key].includes(option)}
+                      onCheckedChange={(checked) =>
+                        handleFilter(
+                          key,
+                          checked
+                            ? [...filters[key], option]
+                            : filters[key].filter((l) => l !== option)
+                        )
+                      }
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Input
+                placeholder={label}
+                value={filters[key]}
+                onChange={(e) => handleFilter(key, e.target.value)}
+              />
+            )}
+          </div>
+        ))}
         <div className="flex items-center gap-2">
           <Button variant="secondary" className="w-full">
             Apply Filters
@@ -173,7 +107,14 @@ export function FilterComponent() {
           <Button
             variant="primary"
             className="w-full"
-            onClick={() => setFilters({})}
+            onClick={() =>
+              setFilters(
+                filterOptions.reduce(
+                  (acc, { key }) => ({ ...acc, [key]: "" }),
+                  { level: ["debug", "info", "warn", "error", "fatal"] }
+                )
+              )
+            }
           >
             Clear Filters
           </Button>

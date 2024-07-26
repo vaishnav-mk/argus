@@ -1,6 +1,8 @@
 "use client";
 import { ChartCard } from "@/components/ChartCard";
 import { useEffect, useState, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const exampleData = {
   errors: [
@@ -30,58 +32,48 @@ const exampleData = {
 };
 
 export function ChartSection() {
+  const {
+    isError,
+    errorMessage: errors,
+    logs: logData,
+    nextPageState: pageState,
+    isLoading: loading,
+  } = useSelector((state) => state.data);
+
   const [data, setData] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    const url = "/api/data";
-
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ page_state: "" }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        let servicesData = [];
-        data.logs.forEach((log) => {
-          if (servicesData.some((service) => service.name === log.service)) {
-            servicesData.find(
-              (service) => service.name === log.service
-            ).value += 1;
-          } else {
-            servicesData.push({
-              name: log.service,
-              value: 1,
-              fill: `var(--color-${log.service})`,
-            });
-          }
-        });
-
-        setData({
-          data: data.logs,
-          services: servicesData,
-        });
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoading(false);
-        console.error(err);
-      });
-  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!logData?.length) {
+      return;
+    }
+    let servicesData = [];
+    logData.forEach((log) => {
+      if (servicesData.some((service) => service.name === log.service)) {
+        servicesData.find((service) => service.name === log.service).value += 1;
+      } else {
+        servicesData.push({
+          name: log.service,
+          value: 1,
+          fill: `var(--color-${log.service})`,
+        });
+      }
+    });
+
+    setData({
+      data: data.logs,
+      services: servicesData,
+    });
+  }, [logData]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+      </div>
+    );
   }
-
-  console.log({ data });
 
   if (Object.keys(data).length === 0) {
     return <div>No data available</div>;

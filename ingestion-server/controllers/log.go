@@ -11,6 +11,7 @@ import (
 	"server/types"
 	"server/utils"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -186,4 +187,105 @@ func DeleteLog(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "Log deleted"})
+}
+
+type SearchParams struct {
+	Text     string      `json:"text"`
+	Regex    string      `json:"regex"`
+	Filters  []Condition `json:"filters"`
+	Timespan Timespan    `json:"timespan"`
+}
+
+type Condition struct {
+	ColumnName   string   `json:"columnName"`
+	FilterValues []string `json:"filterValues"`
+}
+
+type Timespan struct {
+	StartTime time.Time `json:"startTime"`
+	EndTime   time.Time `json:"endTime"`
+}
+
+func SearchLogs(c *gin.Context) {
+	var pageStateRequest PageStateRequest
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "25"))
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Invalid limit"})
+		return
+	}
+
+	if err := c.BindJSON(&pageStateRequest); err != nil {
+		log.Println("Error binding JSON:", err)
+		if err != io.EOF {
+			c.JSON(400, gin.H{"message": "Invalid pageState"})
+			return
+		}
+	}
+
+	pageStateParam := ""
+	if pageStateRequest.PageState != nil {
+		pageStateParam = *pageStateRequest.PageState
+	}
+
+	var pageState []byte
+	if pageStateParam != "" {
+		pageState, err = base64.StdEncoding.DecodeString(pageStateParam)
+		if err != nil {
+			c.JSON(400, gin.H{"message": "Invalid pageState"})
+			return
+		}
+	}
+
+	searchHash := utils.GetHash(c)
+	cachedLogs := config.GetCache(searchHash + "_page_" + pageStateParam)
+
+	if cachedLogs.Logs != nil {
+		c.JSON(200, gin.H{"logs": cachedLogs.Logs, "count": len(cachedLogs.Logs), "cached": true, "nextPageState": cachedLogs.NextPageState})
+		return
+	}
+
+	searchQuery := c.Query("q")
+	if searchQuery == "" {
+		c.JSON(400, gin.H{"message": "Invalid search query"})
+		return
+	}
+
+	q := initializers.DB.Query("SELECT * FROM argus_logs.logs WHERE message LIKE ? ALLOW FILTERING", "%"+searchQuery+"%").PageSize(limit).PageState(pageState)
+
+	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
+	var logs []types.Log
+	it := q.Iter()
+	for it.Scan(&timestamp, &commit, &level, &message, &metadata, &resourceID, &service, &spanID, &traceID) {
+		metadataBytes := []byte(metadata)
+		var metadataMap map[string]interface{}
+		err := json.Unmarshal(metadataBytes, &metadataMap)
+		if err != nil {
+			fmt.Println("Error unmarshalling metadata:", err)
+			continue
+		}
+		logs = append(logs, types.Log{
+			Level:      level,
+			Message:    message,
+			ResourceID: resourceID,
+			Timestamp:  timestamp,
+			TraceID:    traceID,
+			SpanID:     spanID,
+			Commit:     commit,
+			Metadata:   metadataMap,
+			Service:    service,
+		})
+	}
+	nextPageState := it.PageState()
+	if err := it.Close(); err != nil {
+		fmt.Println("Error closing iterator:", err)
+	}
+	if len(logs) == 0 {
+		c.JSON(404, gin.H{"message": "No logs found"})
+		return
+	}
+	nextPageStateStr := base64.StdEncoding.EncodeToString(nextPageState)
+
+	go config.SetCache(searchHash+"_page_"+pageStateParam, config.LogCache{NextPageState: nextPageStateStr, Logs: logs})
+
+	c.JSON(200, gin.H{"logs": logs, "count": len(logs), "cached": false, "nextPageState": nextPageStateStr})
 }

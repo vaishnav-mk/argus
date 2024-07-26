@@ -67,7 +67,6 @@ export function Header() {
                   <ChevronRightIcon className="h-4 w-4" />
                 </div>
               </DropdownMenuCheckboxItem>
-              {/* Other DropdownMenuCheckboxItem components */}
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>

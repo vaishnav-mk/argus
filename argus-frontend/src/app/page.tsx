@@ -1,19 +1,31 @@
-// components/Component.tsx
 "use client";
+import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { ChartSection } from "@/components/ChartSection";
 import { TableSection } from "@/components/TableSection";
 import { FilterComponent } from "@/components/FilterComponent";
 import { MetricsSection } from "@/components/MetricsSection";
-import { useCounterStore } from "@/providers/counter-store-provider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import React from "react";
+import { useDispatch, useSelector } from "react-redux";
+
+import { getAllLogs } from "@/redux/slice/dataSlice";
 
 export default function Component() {
-  const { count, incrementCount, decrementCount } = useCounterStore(
-    (state) => state
+  const dispatch = useDispatch();
+
+  const [activeTab, setActiveTab] = useState("graph");
+
+  const { isError, errorMessage, logs, nextPageState, isLoading } = useSelector(
+    (state) => state.data
   );
-  const [activeTab, setActiveTab] = React.useState("graph");
+
+  const logData = useCallback(() => {
+    dispatch(getAllLogs());
+  }, [dispatch]);
+
+  useEffect(() => {
+    logData();
+  }, [logData]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -23,17 +35,7 @@ export default function Component() {
     <>
       <Header />
 
-      <div className="flex flex-col h-screen p-6 gap-6">
-        {/* <div>
-        Count: {count}
-        <hr />
-        <button type="button" onClick={() => void incrementCount()}>
-          Increment Count
-        </button>
-        <button type="button" onClick={() => void decrementCount()}>
-          Decrement Count
-        </button>
-      </div> */}
+      <div className="flex flex-col p-6 gap-6">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="graph">Graphs</TabsTrigger>
