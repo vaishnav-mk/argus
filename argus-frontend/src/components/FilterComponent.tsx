@@ -21,6 +21,9 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+
+import { searchLogs } from "@/redux/slice/dataSlice";
 
 const filterOptions = [
   {
@@ -28,29 +31,69 @@ const filterOptions = [
     label: "Level",
     options: ["debug", "info", "warn", "error", "fatal"],
   },
+  { key: "service", label: "Service" },
   { key: "message", label: "Message" },
-  { key: "resourceId", label: "Resource ID" },
-  { key: "traceId", label: "Trace ID" },
-  { key: "spanId", label: "Span ID" },
+  { key: "resource_id", label: "Resource ID" },
+  { key: "trace_id", label: "Trace ID" },
+  { key: "span_id", label: "Span ID" },
   { key: "commit", label: "Commit" },
   { key: "metadata.parentResourceId", label: "Parent Resource ID" },
   { key: "regex", label: "Regular Expression" },
 ];
 
 export function FilterComponent() {
+  const dispatch = useDispatch();
+
   const [filters, setFilters] = useState(
     filterOptions.reduce((acc, { key }) => ({ ...acc, [key]: "" }), {
       level: ["debug", "info", "warn", "error", "fatal"],
     })
   );
   const [useRegex, setUseRegex] = useState(false);
+  const [timespan, setTimespan] = useState({ startTime: "", endTime: "" });
 
-  const handleFilter = (key: string, value: string | string[]) => {
+  const handleFilter = (key, value) => {
     setFilters((prevFilters) => ({ ...prevFilters, [key]: value }));
   };
 
-  const handleRegexToggle = (checked: boolean) => {
+  const handleRegexToggle = (checked) => {
     setUseRegex(checked);
+  };
+
+  const handleTimespanChange = (key, value) => {
+    setTimespan((prevTimespan) => ({ ...prevTimespan, [key]: value }));
+  };
+
+  const handleApplyFilters = () => {
+    const searchParams = {
+      text: filters.message,
+      regex: filters.regex,
+      filters: filterOptions
+        .filter(({ key }) => key !== "message" && key !== "regex")
+        .map(({ key }) => ({
+          columnName: key,
+          filterValues: Array.isArray(filters[key])
+            ? filters[key]
+            : filters[key]
+            ? [filters[key]]
+            : [],
+        })),
+      timespan: {
+        startTime: timespan.startTime,
+        endTime: timespan.endTime,
+      },
+    };
+    console.log(searchParams);
+    dispatch(searchLogs(searchParams));
+  };
+
+  const handleClearFilters = () => {
+    setFilters(
+      filterOptions.reduce((acc, { key }) => ({ ...acc, [key]: "" }), {
+        level: ["debug", "info", "warn", "error", "fatal"],
+      })
+    );
+    setTimespan({ startTime: "", endTime: "" });
   };
 
   return (
@@ -100,21 +143,34 @@ export function FilterComponent() {
             )}
           </div>
         ))}
+        <div>
+          <Label>Start Time</Label>
+          <Input
+            type="datetime-local"
+            value={timespan.startTime}
+            onChange={(e) => handleTimespanChange("startTime", e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>End Time</Label>
+          <Input
+            type="datetime-local"
+            value={timespan.endTime}
+            onChange={(e) => handleTimespanChange("endTime", e.target.value)}
+          />
+        </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" className="w-full">
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={handleApplyFilters}
+          >
             Apply Filters
           </Button>
           <Button
             variant="primary"
             className="w-full"
-            onClick={() =>
-              setFilters(
-                filterOptions.reduce(
-                  (acc, { key }) => ({ ...acc, [key]: "" }),
-                  { level: ["debug", "info", "warn", "error", "fatal"] }
-                )
-              )
-            }
+            onClick={handleClearFilters}
           >
             Clear Filters
           </Button>

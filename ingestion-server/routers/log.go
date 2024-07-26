@@ -11,6 +11,7 @@ func LogRouter(config *gin.Engine) {
 	logs := config.Group("/logs")
 	{
 		logs.POST("/data", middlewares.AddUUID, controllers.GetLogs)
+		logs.POST("/search", middlewares.AddUUID, controllers.SearchLogs)
 		logs.GET("/count", middlewares.AddUUID, controllers.CountLogs)
 		logs.GET("/:log_id", middlewares.AddUUID, controllers.GetLog)
 

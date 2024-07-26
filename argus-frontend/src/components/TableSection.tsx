@@ -118,11 +118,11 @@ export const columns: ColumnDef<any>[] = [
     header: "Commit",
     cell: ({ row }) => <div>{row.getValue("commit")}</div>,
   },
-  {
-    accessorKey: "metadata.parentResourceId",
-    header: "Parent Resource ID",
-    cell: ({ row }) => <div>{row.getValue("metadata.parentResourceId")}</div>,
-  },
+  // {
+  //   accessorKey: "metadata.parentResourceId",
+  //   header: "Parent Resource ID",
+  //   cell: ({ row }) => <div>{row.getValue("metadata")}</div>,
+  // },
   {
     id: "actions",
     enableHiding: false,

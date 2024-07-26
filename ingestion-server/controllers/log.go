@@ -207,26 +207,22 @@ type Timespan struct {
 }
 
 func SearchLogs(c *gin.Context) {
-	var pageStateRequest PageStateRequest
+	var searchParams SearchParams
 	limit, err := strconv.Atoi(c.DefaultQuery("limit", "25"))
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Invalid limit"})
 		return
 	}
 
-	if err := c.BindJSON(&pageStateRequest); err != nil {
+	if err := c.BindJSON(&searchParams); err != nil {
 		log.Println("Error binding JSON:", err)
 		if err != io.EOF {
-			c.JSON(400, gin.H{"message": "Invalid pageState"})
+			c.JSON(400, gin.H{"message": "Invalid search parameters"})
 			return
 		}
 	}
 
-	pageStateParam := ""
-	if pageStateRequest.PageState != nil {
-		pageStateParam = *pageStateRequest.PageState
-	}
-
+	pageStateParam := c.DefaultQuery("pageState", "")
 	var pageState []byte
 	if pageStateParam != "" {
 		pageState, err = base64.StdEncoding.DecodeString(pageStateParam)
@@ -244,13 +240,32 @@ func SearchLogs(c *gin.Context) {
 		return
 	}
 
-	searchQuery := c.Query("q")
-	if searchQuery == "" {
-		c.JSON(400, gin.H{"message": "Invalid search query"})
-		return
+	query := "SELECT * FROM argus_logs.logs WHERE"
+	conditions := []interface{}{}
+
+	if searchParams.Text != "" {
+		query += " message LIKE ? AND"
+		conditions = append(conditions, "%"+searchParams.Text+"%")
 	}
 
-	q := initializers.DB.Query("SELECT * FROM argus_logs.logs WHERE message LIKE ? ALLOW FILTERING", "%"+searchQuery+"%").PageSize(limit).PageState(pageState)
+	for _, filter := range searchParams.Filters {
+		query += fmt.Sprintf(" %s IN ? AND", filter.ColumnName)
+		conditions = append(conditions, filter.FilterValues)
+	}
+
+	if !searchParams.Timespan.StartTime.IsZero() && !searchParams.Timespan.EndTime.IsZero() {
+		query += " timestamp >= ? AND timestamp <= ? AND"
+		conditions = append(conditions, searchParams.Timespan.StartTime.Format(time.RFC3339), searchParams.Timespan.EndTime.Format(time.RFC3339))
+	}
+
+	query = query[:len(query)-4] // remove trailing " AND"
+
+	query = query + " ALLOW FILTERING"
+
+	fmt.Println("Query:", query)
+	fmt.Println("Conditions:", conditions)
+	
+	q := initializers.DB.Query(query, conditions...).PageSize(limit).PageState(pageState)
 
 	var level, message, resourceID, timestamp, traceID, spanID, commit, metadata, service string
 	var logs []types.Log
