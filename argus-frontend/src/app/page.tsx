@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { ChartSection } from "@/components/ChartSection";
-import { TableSection } from "@/components/TableSection";
+import { TableSection } from "@/components/table/table-card";
 import { FilterComponent } from "@/components/FilterComponent";
 import { MetricsSection } from "@/components/MetricsSection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";

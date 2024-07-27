@@ -34,7 +34,7 @@ const dataSlice = createSlice({
   name: "logs",
   initialState: {
     logs: [],
-    isLoading: false,
+    isLoading: true,
     nextPageState: "",
     isError: false,
   },
@@ -64,7 +64,6 @@ const dataSlice = createSlice({
         state.isLoading = true;
       })
       .addCase(searchLogs.fulfilled, (state, action) => {
-        console.log({ action });
         state.isLoading = false;
         if (action.payload.logs) {
           state.logs = action.payload.logs;
